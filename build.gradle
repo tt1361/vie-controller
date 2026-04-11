@@ -1,0 +1,43 @@
+plugins {
+    id 'java'
+    id 'idea'
+}
+
+group = 'com.iflytek.vie'
+version = '0.0.1-SNAPSHOT-decompiled'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+        resources {
+            srcDirs = ['src/main/resources']
+        }
+    }
+}
+
+repositories {
+    flatDir {
+        dirs 'libs'
+        dirs '../VIEWEB/WEB-INF/lib'
+    }
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation fileTree(dir: '../VIEWEB/WEB-INF/lib', include: ['*.jar'])
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+jar {
+    archiveBaseName = 'vie-app-controller-decompiled'
+}

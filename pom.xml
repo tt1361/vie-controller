@@ -1,0 +1,62 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.iflytek.vie</groupId>
+  <artifactId>vie-app-controller</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <name>vie-app-controller reconstructed</name>
+  <description>Standalone reconstructed Maven project for vie-app-controller</description>
+
+  <properties>
+    <maven.compiler.source>1.8</maven.compiler.source>
+    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.release></maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <legacy.lib.dir>${project.basedir}/../VIEWEB/WEB-INF/lib</legacy.lib.dir>
+    <legacy.extra.lib.dir>${project.basedir}/libs</legacy.extra.lib.dir>
+  </properties>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+            <version>1.10.14</version>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant-launcher</artifactId>
+            <version>1.10.14</version>
+          </dependency>
+        </dependencies>
+        <executions>
+          <execution>
+            <id>package-reconstructed-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <exec executable="/bin/zsh" dir="${project.basedir}">
+                  <arg value="./package.sh"/>
+                </exec>
+                <mkdir dir="${project.build.directory}"/>
+                <copy file="${project.basedir}/dist/vie-app-controller-0.0.1-SNAPSHOT.jar"
+                      tofile="${project.build.directory}/vie-app-controller-0.0.1-SNAPSHOT.jar"/>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

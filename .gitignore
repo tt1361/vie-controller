@@ -1,0 +1,9 @@
+.idea/
+.gradle/
+.tmp/
+*.iml
+build/
+dist/
+original-classes/
+target/
+tmp_out/
