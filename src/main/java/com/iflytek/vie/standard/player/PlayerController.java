@@ -27,7 +27,10 @@ import com.iflytek.vie.utils.BaseUtils;
 import com.iflytek.vie.utils.PropertyPlaceholderConfigurerUtils;
 import com.iflytek.vie.utils.StringUtils;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -126,6 +129,9 @@ public class PlayerController {
          }
 
          String selVoiceColumn = LoadConfig.getConfigProperty("selVoiceColumn");
+         if (selVoiceColumn != null && !selVoiceColumn.contains("listenUrl")) {
+            selVoiceColumn = selVoiceColumn + ",listenUrl";
+         }
          voiceDataRequest.setSelVoiceColumn(selVoiceColumn);
          voiceDataRequest.setCallId(callId);
          VoiceDataResponse voiceDataResponse = this.dataQueryService.getVoiceList_ByVoice(voiceDataRequest);
@@ -149,6 +155,9 @@ public class PlayerController {
          }
 
          String selVoiceColumn = LoadConfig.getConfigProperty("selVoiceColumn");
+         if (selVoiceColumn != null && !selVoiceColumn.contains("listenUrl")) {
+            selVoiceColumn = selVoiceColumn + ",listenUrl";
+         }
          voiceDataRequest.setSelVoiceColumn(selVoiceColumn);
          voiceDataRequest.setTaskId(taskId);
          VoiceDataResponse voiceDataResponse = this.dataQueryService.getVoiceList_ByTask(voiceDataRequest);
@@ -900,13 +909,16 @@ public class PlayerController {
          List queryList = new ArrayList();
          queryList.add("voiceUri");
          queryList.add("machineId");
+         queryList.add("listenUrl");
          LinkedHashMap map = this.getAudioBaseInfo_ByVoice(voiceId, queryList, request, dataSourceParam);
          String voiceUrl = map.get("voiceUri") == null ? "" : String.valueOf(map.get("voiceUri"));
          String macTag = map.get("machineId") == null ? "" : String.valueOf(map.get("machineId"));
+         String listenUrl = map.get("listenUrl") == null ? "" : String.valueOf(map.get("listenUrl"));
          if (!StringUtils.isNullOrEmpry(voiceUrl) && !StringUtils.isNullOrEmpry(macTag)) {
             Map resultMap = new HashMap();
             resultMap.put("voicePath", voiceUrl);
             resultMap.put("macTag", macTag);
+            resultMap.put("listenUrl", listenUrl);
             logger.info("===========getSpeechInfo_ByVoice方法被调用========结束");
             return ResponseResult.success(resultMap, "查询成功!");
          } else {
@@ -926,9 +938,11 @@ public class PlayerController {
          queryList.add("childVoiceUri");
          queryList.add("machineId");
          queryList.add("childVoiceId");
+         queryList.add("listenUrl");
          LinkedHashMap map = this.getAudioBaseInfo_ByTask(taskId, queryList, request, dataSourceParam);
          String voiceUrl = "";
          String macTag = map.get("machineId") == null ? "" : String.valueOf(map.get("machineId"));
+         String listenUrl = "";
          Object child_fields = map.get("child_fields");
          ArrayList child_fields_ArrayList = (ArrayList)child_fields;
 
@@ -936,6 +950,7 @@ public class PlayerController {
             String childVoiceIdStr = String.valueOf(((HashMap)child_fields_ArrayList.get(i)).get("childVoiceId"));
             if (voiceId.equals(childVoiceIdStr)) {
                voiceUrl = String.valueOf(((HashMap)child_fields_ArrayList.get(i)).get("childVoiceUri"));
+               listenUrl = String.valueOf(((HashMap)child_fields_ArrayList.get(i)).get("listenUrl"));
                break;
             }
          }
@@ -944,6 +959,7 @@ public class PlayerController {
             Map resultMap = new HashMap();
             resultMap.put("voicePath", voiceUrl);
             resultMap.put("macTag", macTag);
+            resultMap.put("listenUrl", listenUrl);
             logger.info("===========getSpeechInfo_ByTask方法被调用========结束");
             return ResponseResult.success(resultMap, "查询成功!");
          } else {
@@ -960,7 +976,7 @@ public class PlayerController {
       method = {RequestMethod.GET}
    )
    @ResponseBody
-   public Object getGramData(HttpServletRequest request, String voicePath, String macTag, String dataSource) {
+   public Object getGramData(HttpServletRequest request, String voicePath, String macTag, String dataSource, @RequestParam(value = "listenUrl", required = false) String listenUrl) {
       logger.info("===========getGramData方法被调用========开始");
 
       try {
@@ -975,10 +991,15 @@ public class PlayerController {
          dataQueryRequest.setVoiceGramSampleRange(voiceGramSampleRange);
          dataQueryRequest.setVoiceGramChannel(voiceGramChannel);
          dataQueryRequest.setVoiceGramBlockSize(voiceGramBlockSize);
-         if (dataSource.equals("vie-flynull")) {
+         if (dataSource != null && dataSource.equals("vie-flynull")) {
             dataQueryRequest.setDataSource(BaseUtils.getDataSource(request));
-         } else {
+         } else if (dataSource != null) {
             dataQueryRequest.setDataSource(dataSource);
+         }
+
+         // 如果是新录音，将 listenUrl 放入 macTag 字段（因为 DataQueryRequest 是外部 JAR 无法新增字段）
+         if ("02".equals(voicePath) && listenUrl != null && !listenUrl.isEmpty()) {
+            dataQueryRequest.setMacTag("__LISTEN_URL__" + listenUrl);
          }
 
          Object result = this.dataQueryService.getGramData(dataQueryRequest);
@@ -995,25 +1016,55 @@ public class PlayerController {
       method = {RequestMethod.GET, RequestMethod.POST}
    )
    @ResponseBody
-   public void play(HttpServletRequest request, HttpServletResponse response, @RequestParam(value = "voicePath",required = true) String voicePath, @RequestParam(value = "macTag",required = true) String macTag) {
+   public void play(HttpServletRequest request, HttpServletResponse response, @RequestParam(value = "voicePath",required = true) String voicePath, @RequestParam(value = "macTag",required = true) String macTag, @RequestParam(value = "listenUrl",required = false) String listenUrl) {
       logger.info("===========play方法被调用========开始");
 
       try {
-         String range = request.getHeader("Range");
-         int count = Integer.parseInt(LoadConfig.getConfigProperty("blockSize"));
-         DataQueryRequest dataQueryRequest = new DataQueryRequest();
-         dataQueryRequest.setVoicePath(voicePath);
-         dataQueryRequest.setMacTag(macTag);
-         dataQueryRequest.setRange(range);
-         dataQueryRequest.setCount(count);
-         PlayAudio result = this.dataQueryService.getPlayData(dataQueryRequest);
-         response.setContentType("audio/wav");
-         response.addHeader("Content-Length", String.valueOf(result.getPlayBytes().length));
-         response.addHeader("Accept-Ranges", "bytes");
-         response.addHeader("Content-Range", result.getContentRange());
-         response.setStatus(206);
-         response.getOutputStream().write(result.getPlayBytes());
-         response.getOutputStream().flush();
+         // 判断是新录音还是老录音
+         if ("02".equals(voicePath) && listenUrl != null && !listenUrl.isEmpty()) {
+            // 新录音：通过 HTTP 访问 listenUrl 获取音频
+            URL url = new URL(listenUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setConnectTimeout(5000);
+            conn.setReadTimeout(30000);
+
+            int contentLength = conn.getContentLength();
+            response.setContentType("audio/wav");
+            if (contentLength > 0) {
+               response.addHeader("Content-Length", String.valueOf(contentLength));
+            }
+            response.setStatus(206);
+
+            InputStream inputStream = conn.getInputStream();
+            OutputStream outputStream = response.getOutputStream();
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+               outputStream.write(buffer, 0, bytesRead);
+            }
+            outputStream.flush();
+            inputStream.close();
+            logger.info("新录音通过listenUrl播放成功");
+         } else {
+            // 老录音：原有逻辑
+            String range = request.getHeader("Range");
+            int count = Integer.parseInt(LoadConfig.getConfigProperty("blockSize"));
+            DataQueryRequest dataQueryRequest = new DataQueryRequest();
+            dataQueryRequest.setVoicePath(voicePath);
+            dataQueryRequest.setMacTag(macTag);
+            dataQueryRequest.setRange(range);
+            dataQueryRequest.setCount(count);
+            PlayAudio result = this.dataQueryService.getPlayData(dataQueryRequest);
+            response.setContentType("audio/wav");
+            response.addHeader("Content-Length", String.valueOf(result.getPlayBytes().length));
+            response.addHeader("Accept-Ranges", "bytes");
+            response.addHeader("Content-Range", result.getContentRange());
+            response.setStatus(206);
+            response.getOutputStream().write(result.getPlayBytes());
+            response.getOutputStream().flush();
+            logger.info("老录音通过原有方式播放成功");
+         }
       } catch (Exception var17) {
          logger.error("【play】方法调用错误", var17);
       } finally {

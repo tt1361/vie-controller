@@ -33,6 +33,7 @@ javac \
   -encoding UTF-8 \
   -source 8 \
   -target 8 \
+  -parameters \
   -cp "$LIB_CP" \
   -d "$CLASS_DIR" \
   @"$SOURCE_LIST"
