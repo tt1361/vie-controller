@@ -997,9 +997,9 @@ public class PlayerController {
             dataQueryRequest.setDataSource(dataSource);
          }
 
-         if ("02".equals(voicePath)) {
+         if ("02".equals(voicePath) && listenUrl != null && !listenUrl.isEmpty()) {
             long safeDurationMs = durationMs == null ? 0L : Math.max(durationMs, 0L);
-            dataQueryRequest.setMacTag("__NEW_RECORDING__" + safeDurationMs);
+            dataQueryRequest.setMacTag("__NEW_RECORDING__" + safeDurationMs + "__LISTEN_URL__" + listenUrl);
          }
 
          Object result = this.dataQueryService.getGramData(dataQueryRequest);
