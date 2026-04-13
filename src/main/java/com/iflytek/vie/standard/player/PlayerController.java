@@ -976,7 +976,7 @@ public class PlayerController {
       method = {RequestMethod.GET}
    )
    @ResponseBody
-   public Object getGramData(HttpServletRequest request, String voicePath, String macTag, String dataSource, @RequestParam(value = "listenUrl", required = false) String listenUrl) {
+   public Object getGramData(HttpServletRequest request, String voicePath, String macTag, String dataSource, @RequestParam(value = "listenUrl", required = false) String listenUrl, @RequestParam(value = "durationMs", required = false) Long durationMs) {
       logger.info("===========getGramData方法被调用========开始");
 
       try {
@@ -997,9 +997,9 @@ public class PlayerController {
             dataQueryRequest.setDataSource(dataSource);
          }
 
-         // 如果是新录音，将 listenUrl 放入 macTag 字段（因为 DataQueryRequest 是外部 JAR 无法新增字段）
-         if ("02".equals(voicePath) && listenUrl != null && !listenUrl.isEmpty()) {
-            dataQueryRequest.setMacTag("__LISTEN_URL__" + listenUrl);
+         if ("02".equals(voicePath)) {
+            long safeDurationMs = durationMs == null ? 0L : Math.max(durationMs, 0L);
+            dataQueryRequest.setMacTag("__NEW_RECORDING__" + safeDurationMs);
          }
 
          Object result = this.dataQueryService.getGramData(dataQueryRequest);
@@ -1039,7 +1039,7 @@ public class PlayerController {
                String contentLength = conn.getHeaderField("Content-Length");
                String contentRange = conn.getHeaderField("Content-Range");
                String acceptRanges = conn.getHeaderField("Accept-Ranges");
-               response.setContentType(StringUtils.isNullOrEmpry(contentType) ? "audio/wav" : contentType);
+               response.setContentType(StringUtils.isNullOrEmpry(contentType) ? "audio/mpeg" : contentType);
                if (!StringUtils.isNullOrEmpry(contentLength)) {
                   response.setHeader("Content-Length", contentLength);
                }
