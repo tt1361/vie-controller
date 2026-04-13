@@ -1022,30 +1022,62 @@ public class PlayerController {
       try {
          // 判断是新录音还是老录音
          if ("02".equals(voicePath) && listenUrl != null && !listenUrl.isEmpty()) {
-            // 新录音：通过 HTTP 访问 listenUrl 获取音频
+            String range = request.getHeader("Range");
             URL url = new URL(listenUrl);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(5000);
-            conn.setReadTimeout(30000);
+            HttpURLConnection conn = (HttpURLConnection)url.openConnection();
 
-            int contentLength = conn.getContentLength();
-            response.setContentType("audio/wav");
-            if (contentLength > 0) {
-               response.addHeader("Content-Length", String.valueOf(contentLength));
-            }
-            response.setStatus(206);
+            try {
+               conn.setRequestMethod("GET");
+               conn.setConnectTimeout(5000);
+               conn.setReadTimeout(30000);
+               if (!StringUtils.isNullOrEmpry(range)) {
+                  conn.setRequestProperty("Range", range);
+               }
 
-            InputStream inputStream = conn.getInputStream();
-            OutputStream outputStream = response.getOutputStream();
-            byte[] buffer = new byte[4096];
-            int bytesRead;
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-               outputStream.write(buffer, 0, bytesRead);
+               int status = conn.getResponseCode();
+               String contentType = conn.getContentType();
+               String contentLength = conn.getHeaderField("Content-Length");
+               String contentRange = conn.getHeaderField("Content-Range");
+               String acceptRanges = conn.getHeaderField("Accept-Ranges");
+               response.setContentType(StringUtils.isNullOrEmpry(contentType) ? "audio/wav" : contentType);
+               if (!StringUtils.isNullOrEmpry(contentLength)) {
+                  response.setHeader("Content-Length", contentLength);
+               }
+
+               if (!StringUtils.isNullOrEmpry(contentRange)) {
+                  response.setHeader("Content-Range", contentRange);
+               }
+
+               if (!StringUtils.isNullOrEmpry(acceptRanges)) {
+                  response.setHeader("Accept-Ranges", acceptRanges);
+               } else {
+                  response.setHeader("Accept-Ranges", "bytes");
+               }
+
+               response.setStatus(status > 0 ? status : 200);
+               InputStream inputStream = status >= 400 ? conn.getErrorStream() : conn.getInputStream();
+               if (inputStream == null) {
+                  throw new IOException("listenUrl 未返回可读取的音频流");
+               }
+
+               try {
+                  OutputStream outputStream = response.getOutputStream();
+                  byte[] buffer = new byte[4096];
+
+                  int bytesRead;
+                  while((bytesRead = inputStream.read(buffer)) != -1) {
+                     outputStream.write(buffer, 0, bytesRead);
+                  }
+
+                  outputStream.flush();
+               } finally {
+                  inputStream.close();
+               }
+
+               logger.info("新录音通过listenUrl播放成功, status={}, range={}", status, range);
+            } finally {
+               conn.disconnect();
             }
-            outputStream.flush();
-            inputStream.close();
-            logger.info("新录音通过listenUrl播放成功");
          } else {
             // 老录音：原有逻辑
             String range = request.getHeader("Range");
