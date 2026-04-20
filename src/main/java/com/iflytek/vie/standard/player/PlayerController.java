@@ -129,9 +129,6 @@ public class PlayerController {
          }
 
          String selVoiceColumn = LoadConfig.getConfigProperty("selVoiceColumn");
-         if (selVoiceColumn != null && !selVoiceColumn.contains("listenUrl")) {
-            selVoiceColumn = selVoiceColumn + ",listenUrl";
-         }
          voiceDataRequest.setSelVoiceColumn(selVoiceColumn);
          voiceDataRequest.setCallId(callId);
          VoiceDataResponse voiceDataResponse = this.dataQueryService.getVoiceList_ByVoice(voiceDataRequest);
@@ -155,9 +152,6 @@ public class PlayerController {
          }
 
          String selVoiceColumn = LoadConfig.getConfigProperty("selVoiceColumn");
-         if (selVoiceColumn != null && !selVoiceColumn.contains("listenUrl")) {
-            selVoiceColumn = selVoiceColumn + ",listenUrl";
-         }
          voiceDataRequest.setSelVoiceColumn(selVoiceColumn);
          voiceDataRequest.setTaskId(taskId);
          VoiceDataResponse voiceDataResponse = this.dataQueryService.getVoiceList_ByTask(voiceDataRequest);
