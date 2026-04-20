@@ -909,11 +909,14 @@ public class PlayerController {
          List queryList = new ArrayList();
          queryList.add("voiceUri");
          queryList.add("machineId");
-         queryList.add("listenUrl");
+         boolean queryListenUrl = this.isDpszxvieDataSource(request, dataSourceParam);
+         if (queryListenUrl) {
+            queryList.add("listenUrl");
+         }
          LinkedHashMap map = this.getAudioBaseInfo_ByVoice(voiceId, queryList, request, dataSourceParam);
          String voiceUrl = map.get("voiceUri") == null ? "" : String.valueOf(map.get("voiceUri"));
          String macTag = map.get("machineId") == null ? "" : String.valueOf(map.get("machineId"));
-         String listenUrl = map.get("listenUrl") == null ? "" : String.valueOf(map.get("listenUrl"));
+         String listenUrl = queryListenUrl && map.get("listenUrl") != null ? String.valueOf(map.get("listenUrl")) : "";
          if (!StringUtils.isNullOrEmpry(voiceUrl) && !StringUtils.isNullOrEmpry(macTag)) {
             Map resultMap = new HashMap();
             resultMap.put("voicePath", voiceUrl);
@@ -938,7 +941,10 @@ public class PlayerController {
          queryList.add("childVoiceUri");
          queryList.add("machineId");
          queryList.add("childVoiceId");
-         queryList.add("listenUrl");
+         boolean queryListenUrl = this.isDpszxvieDataSource(request, dataSourceParam);
+         if (queryListenUrl) {
+            queryList.add("listenUrl");
+         }
          LinkedHashMap map = this.getAudioBaseInfo_ByTask(taskId, queryList, request, dataSourceParam);
          String voiceUrl = "";
          String macTag = map.get("machineId") == null ? "" : String.valueOf(map.get("machineId"));
@@ -950,7 +956,9 @@ public class PlayerController {
             String childVoiceIdStr = String.valueOf(((HashMap)child_fields_ArrayList.get(i)).get("childVoiceId"));
             if (voiceId.equals(childVoiceIdStr)) {
                voiceUrl = String.valueOf(((HashMap)child_fields_ArrayList.get(i)).get("childVoiceUri"));
-               listenUrl = String.valueOf(((HashMap)child_fields_ArrayList.get(i)).get("listenUrl"));
+               if (queryListenUrl && ((HashMap)child_fields_ArrayList.get(i)).get("listenUrl") != null) {
+                  listenUrl = String.valueOf(((HashMap)child_fields_ArrayList.get(i)).get("listenUrl"));
+               }
                break;
             }
          }
@@ -1291,6 +1299,15 @@ public class PlayerController {
          resultMap.put("sampleCount", initialiseWaveFormat.getSampleCount());
       }
 
+   }
+
+   private boolean isDpszxvieDataSource(HttpServletRequest request, String dataSourceParam) {
+      String dataSource = dataSourceParam;
+      if ("vie-flynull".equals(dataSourceParam)) {
+         dataSource = BaseUtils.getDataSource(request);
+      }
+
+      return dataSource != null && dataSource.contains("dpszxvie");
    }
 
    private LinkedHashMap<String, Object> getAudioBaseInfo_ByVoice(String voiceId, List<String> queryList, HttpServletRequest request, String dataSourceParam) throws VieAppServiceException {
